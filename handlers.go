@@ -14,10 +14,16 @@ func handleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+    // FIX: Add API fallback if channel is not in state cache
 	channel, err := s.State.Channel(m.ChannelID)
 	if err != nil {
-		log.Printf("Error fetching channel %s: %v", m.ChannelID, err)
-		return
+		// Attempt to fetch channel directly from Discord API (required for DMs not in state)
+        channel, err = s.Channel(m.ChannelID)
+        if err != nil {
+            log.Printf("Error fetching channel %s: %v", m.ChannelID, err)
+            // If we can't get channel info, we can't process the message, so we return.
+            return
+        }
 	}
 
 	// --- CASE 1: Incoming User DM ---
