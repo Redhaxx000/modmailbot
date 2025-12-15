@@ -14,10 +14,10 @@ func handleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-    // FIX: Add API fallback if channel is not in state cache
+    // FIX 1: Channel fetch with API fallback (required for DMs not in state cache)
 	channel, err := s.State.Channel(m.ChannelID)
 	if err != nil {
-		// Attempt to fetch channel directly from Discord API (required for DMs not in state)
+		// Attempt to fetch channel directly from Discord API
         channel, err = s.Channel(m.ChannelID)
         if err != nil {
             log.Printf("Error fetching channel %s: %v", m.ChannelID, err)
@@ -61,10 +61,15 @@ func handleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if userID != "" {
+            // FIX 2: Member fetch with API fallback (required if member data is not cached)
 			member, err := s.State.Member(cfg.GuildID, m.Author.ID)
 			if err != nil {
-				log.Printf("Error fetching member %s: %v", m.Author.ID, err)
-				return
+                // Member not in state cache, fetch directly from API
+                member, err = s.GuildMember(cfg.GuildID, m.Author.ID)
+                if err != nil {
+				    log.Printf("Error fetching member %s: %v", m.Author.ID, err)
+				    return
+                }
 			}
 
 			if isStaff(member) {
